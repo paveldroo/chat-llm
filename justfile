@@ -1,7 +1,9 @@
+set dotenv-load := true
+
 export PROJECT_NAME := "chat-llm"
 
 run:
-    cargo run
+    cargo run -- "hello"
 
 lint:
     cargo fmt
