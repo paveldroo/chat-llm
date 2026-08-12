@@ -16,9 +16,7 @@ fn main() -> ExitCode {
 
 fn run() -> Result<(), Box<dyn Error>> {
     let args: Vec<String> = env::args().collect();
-    let Ok(_) = env::var("LLM_API_KEY") else {
-        return Err("you should specify LLM_API_KEY env".into());
-    };
+    let _api_key = env::var("LLM_API_KEY").map_err(|_| "LLM_API_KEY is not set (see .env.example)");
     match args.get(1) {
         Some(text) => println!("{text}"),
         None => return Err("no text specified".into()),
