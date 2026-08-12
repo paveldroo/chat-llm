@@ -14,6 +14,4 @@ test:
 
 release:
     cargo build --bin {{PROJECT_NAME}} --release
-    cp target/release/{{PROJECT_NAME}} .
-    chmod +x ./{{PROJECT_NAME}}
-    ./{{PROJECT_NAME}}
+    ./target/release/{{PROJECT_NAME}}

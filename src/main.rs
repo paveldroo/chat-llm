@@ -1,15 +1,21 @@
-use std::{env::{self}, process::ExitCode};
+use std::{
+    env::{self},
+    process::ExitCode,
+};
 
 fn main() -> ExitCode {
     let args: Vec<String> = env::args().collect();
-    let _ = env::var("LLM_API_KEY").expect("LLM_API_KEY not found in env");
+    let Ok(_) = env::var("LLM_API_KEY") else {
+        eprintln!("chat-llm: you should specify LLM_API_KEY env");
+        return ExitCode::FAILURE;
+    };
     match args.get(1) {
         Some(text) => println!("{}", text),
         None => {
-            println!("chat-llm: error: no text specified");
-            return ExitCode::FAILURE
+            eprintln!("chat-llm: no text specified");
+            return ExitCode::FAILURE;
         }
-    };
+    }
 
     ExitCode::SUCCESS
 }
