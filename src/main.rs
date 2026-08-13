@@ -1,6 +1,9 @@
 use std::{env, error::Error, process::ExitCode};
 
-fn main() -> ExitCode {
+mod request;
+
+#[tokio::main]
+async fn main() -> ExitCode {
     match run() {
         Ok(()) => ExitCode::SUCCESS,
         Err(err) => {
@@ -12,20 +15,19 @@ fn main() -> ExitCode {
 
 fn run() -> Result<(), Box<dyn Error>> {
     let args: Vec<String> = env::args().collect();
-    let api_key =
-        env::var("LLM_API_KEY").map_err(|_| "LLM_API_KEY is not set (see .env.example)")?;
-    if api_key.is_empty() {
-        return Err("LLM_API_KEY is not set (see .env.example)".into());
-    }
-    match args.get(1) {
-        Some(text) => {
-            if text.is_empty() {
-                return Err("no text specified".into());
-            }
-            println!("{text}");
-        }
-        None => return Err("no text specified".into()),
-    }
+    let _api_key = env::var("LLM_API_KEY")
+        .ok()
+        .map(|s| s.trim().to_owned())
+        .filter(|s| !s.is_empty())
+        .ok_or("LLM_API_KEY is not set (see .env.example)")?;
+
+    let message = args
+        .get(1)
+        .map(|s| s.trim())
+        .filter(|s| !s.is_empty())
+        .ok_or("no text specified")?;
+    println!("{message}");
+    // println!("{api_key}");
 
     Ok(())
 }
