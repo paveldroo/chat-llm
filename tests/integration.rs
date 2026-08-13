@@ -1,31 +1,39 @@
-use assert_cmd::cargo::cargo_bin_cmd;
+use assert_cmd::{Command, cargo::cargo_bin_cmd};
 
-#[test]
-fn no_api_key_env() {
-    let mut cmd = cargo_bin_cmd!("chat-llm");
-    cmd.env_clear();
-    cmd.assert()
-        .failure()
-        .stdout("")
-        .stderr("chat-llm: LLM_API_KEY is not set (see .env.example)\n");
+fn set_all_envs(cmd: &mut Command) {
+    cmd.env("LLM_API_KEY", "test");
+    cmd.env("LLM_URL", "test");
+    cmd.env("MODEL_NAME", "test");
 }
 
 #[test]
-fn empty_api_key_env() {
+fn corrupted_envs() {
     let mut cmd = cargo_bin_cmd!("chat-llm");
     cmd.env_clear();
-    cmd.env("LLM_API_KEY", "");
     cmd.assert()
         .failure()
         .stdout("")
-        .stderr("chat-llm: LLM_API_KEY is not set (see .env.example)\n");
+        .stderr("chat-llm: missing value for field llm_api_key\n");
+}
+
+#[test]
+fn empty_envs() {
+    let mut cmd = cargo_bin_cmd!("chat-llm");
+    cmd.env_clear();
+    cmd.env("LLM_API_KEY", "");
+    cmd.env("LLM_URL", "");
+    cmd.env("MODEL_NAME", "");
+    cmd.assert()
+        .failure()
+        .stdout("")
+        .stderr("chat-llm: empty LLM_API_KEY env variable\n");
 }
 
 #[test]
 fn no_argument() {
     let mut cmd = cargo_bin_cmd!("chat-llm");
     cmd.env_clear();
-    cmd.env("LLM_API_KEY", "test");
+    set_all_envs(&mut cmd);
     cmd.assert()
         .failure()
         .stdout("")
@@ -36,7 +44,7 @@ fn no_argument() {
 fn empty_text() {
     let mut cmd = cargo_bin_cmd!("chat-llm");
     cmd.env_clear();
-    cmd.env("LLM_API_KEY", "test");
+    set_all_envs(&mut cmd);
     cmd.arg("");
     cmd.assert()
         .failure()
@@ -48,7 +56,7 @@ fn empty_text() {
 fn success() {
     let mut cmd = cargo_bin_cmd!("chat-llm");
     cmd.env_clear();
-    cmd.env("LLM_API_KEY", "test");
+    set_all_envs(&mut cmd);
     cmd.arg("some text here");
     cmd.assert().success().stdout("some text here\n").stderr("");
 }

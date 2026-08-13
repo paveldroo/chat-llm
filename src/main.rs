@@ -1,5 +1,6 @@
 use std::{env, error::Error, process::ExitCode};
 
+mod config;
 mod request;
 
 #[tokio::main]
@@ -15,11 +16,8 @@ async fn main() -> ExitCode {
 
 fn run() -> Result<(), Box<dyn Error>> {
     let args: Vec<String> = env::args().collect();
-    let _api_key = env::var("LLM_API_KEY")
-        .ok()
-        .map(|s| s.trim().to_owned())
-        .filter(|s| !s.is_empty())
-        .ok_or("LLM_API_KEY is not set (see .env.example)")?;
+
+    let _config = config::config()?;
 
     let message = args
         .get(1)
