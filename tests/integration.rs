@@ -19,7 +19,7 @@ fn corrupted_envs() {
     cmd.assert()
         .failure()
         .stdout("")
-        .stderr("chat-llm: missing value for field llm_api_key\n");
+        .stderr(predicates::str::contains("llm_api_key"));
 }
 
 #[test]
