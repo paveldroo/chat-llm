@@ -55,8 +55,6 @@ fn empty_text() {
 #[test]
 fn success() {
     let mut cmd = cargo_bin_cmd!("chat-llm");
-    cmd.env_clear();
-    set_all_envs(&mut cmd);
-    cmd.arg("some text here");
-    cmd.assert().success().stdout("some text here\n").stderr("");
+    cmd.arg("what is the capital of France in one word?");
+    cmd.assert().success().stdout("Paris\n").stderr("");
 }
