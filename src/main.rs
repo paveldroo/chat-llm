@@ -1,7 +1,5 @@
+use chat_llm::{config, llm};
 use std::{env, error::Error, process::ExitCode};
-
-mod config;
-mod llm;
 
 #[tokio::main(flavor = "multi_thread")]
 async fn main() -> ExitCode {

@@ -35,3 +35,4 @@ dbg_macro = "warn"
 mem_forget = "warn"
 
 cargo_common_metadata = "allow"
+missing_errors_doc = "allow"

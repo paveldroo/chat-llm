@@ -71,8 +71,8 @@ async fn success() {
         .await;
 
     let mut cmd = cargo_bin_cmd!("chat-llm");
+    set_all_envs(&mut cmd);
     cmd.env("LLM_URL", mock_server.uri());
-
     cmd.arg("what is the capital of France in one word?");
     cmd.assert().success().stdout("Paris\n").stderr("");
 }
