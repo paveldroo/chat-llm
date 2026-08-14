@@ -51,13 +51,20 @@ pub async fn request(cfg: config::Config, message_text: &str) -> Result<String, 
         .send()
         .await?;
 
-    if resp.status() != StatusCode::OK {
-        return Err("response status: {resp.status}".into());
-    }
-
+    let status = resp.status();
     let body = resp.text().await?;
 
-    let resp: ChatResponse = serde_json::from_str(body.as_str())?;
-    let llm_response = resp.choices.get(0).ok_or("no valid choices from LLM").unwrap().message.content.clone();
+    if status != StatusCode::OK {
+        return Err(format!("unexpected response status {status}: {body}").into());
+    }
+
+    let resp: ChatResponse = serde_json::from_str(&body)?;
+    let llm_response = resp
+        .choices
+        .first()
+        .ok_or("no valid choices from LLM")?
+        .message
+        .content
+        .clone();
     Ok(llm_response)
 }
