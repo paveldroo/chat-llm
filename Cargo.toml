@@ -17,6 +17,7 @@ serde_json = "1.0.151"
 [dev-dependencies]
 assert_cmd = "2.2.2"
 predicates = "3.1.4"
+wiremock = "0.6.5"
 
 [lints.clippy]
 pedantic = { level = "warn", priority = -1 }
