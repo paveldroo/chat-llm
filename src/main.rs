@@ -1,7 +1,6 @@
 use std::{env, error::Error, process::ExitCode};
 
 mod config;
-mod request;
 
 #[tokio::main]
 async fn main() -> ExitCode {
