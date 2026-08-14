@@ -1,11 +1,10 @@
 use std::{collections::HashMap, error::Error, time::Duration};
 
-use reqwest::StatusCode;
 use serde::{Deserialize, Serialize};
 
 use crate::config;
 
-#[derive(Serialize, Deserialize, Clone, Debug)]
+#[derive(Serialize, Deserialize, Debug)]
 struct Message {
     role: String,
     content: String,
@@ -35,7 +34,7 @@ pub async fn request(cfg: config::Config, message_text: &str) -> Result<String, 
     };
     let req = ChatRequest {
         model: cfg.model_name,
-        messages: vec![message.clone()],
+        messages: vec![message],
         chat_template_kwargs: HashMap::from([(String::from("enable_thinking"), false)]),
     };
 
@@ -54,7 +53,7 @@ pub async fn request(cfg: config::Config, message_text: &str) -> Result<String, 
     let status = resp.status();
     let body = resp.text().await?;
 
-    if status != StatusCode::OK {
+    if !status.is_success() {
         return Err(format!("unexpected response status {status}: {body}").into());
     }
 
