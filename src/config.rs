@@ -9,7 +9,7 @@ pub struct Config {
     pub model_name: String,
 }
 
-pub fn config() -> Result<Config, Box<dyn Error>> {
+pub fn from_env() -> Result<Config, Box<dyn Error>> {
     let config = envy::from_env::<Config>()?;
 
     if config.llm_api_key.is_empty() {

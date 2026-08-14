@@ -1,4 +1,4 @@
-use std::{collections::HashMap, error::Error, time::Duration};
+use std::{error::Error, time::Duration};
 
 use serde::{Deserialize, Serialize};
 
@@ -11,10 +11,16 @@ struct Message {
 }
 
 #[derive(Serialize)]
+struct ChatTemplateKwargs {
+    enable_thinking: bool,
+}
+
+#[derive(Serialize)]
 struct ChatRequest {
     model: String,
     messages: Vec<Message>,
-    chat_template_kwargs: HashMap<String, bool>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    chat_template_kwargs: Option<ChatTemplateKwargs>,
 }
 
 #[derive(Deserialize, Debug)]
@@ -35,7 +41,9 @@ pub async fn request(cfg: config::Config, message_text: &str) -> Result<String, 
     let req = ChatRequest {
         model: cfg.model_name,
         messages: vec![message],
-        chat_template_kwargs: HashMap::from([(String::from("enable_thinking"), false)]),
+        chat_template_kwargs: Some(ChatTemplateKwargs {
+            enable_thinking: false,
+        }),
     };
 
     let client = reqwest::Client::builder()
@@ -57,8 +65,8 @@ pub async fn request(cfg: config::Config, message_text: &str) -> Result<String, 
         return Err(format!("unexpected response status {status}: {body}").into());
     }
 
-    let resp: ChatResponse = serde_json::from_str(&body)?;
-    let llm_response = resp
+    let parsed_resp: ChatResponse = serde_json::from_str(&body)?;
+    let llm_response = parsed_resp
         .choices
         .first()
         .ok_or("no valid choices from LLM")?

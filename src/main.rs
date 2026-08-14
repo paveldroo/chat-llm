@@ -3,7 +3,7 @@ use std::{env, error::Error, process::ExitCode};
 mod config;
 mod llm;
 
-#[tokio::main]
+#[tokio::main(flavor = "multi_thread")]
 async fn main() -> ExitCode {
     match run().await {
         Ok(llm_response) => {
@@ -20,7 +20,7 @@ async fn main() -> ExitCode {
 async fn run() -> Result<String, Box<dyn Error>> {
     let args: Vec<String> = env::args().collect();
 
-    let cfg = config::config()?;
+    let cfg = config::from_env()?;
 
     let message = args
         .get(1)
