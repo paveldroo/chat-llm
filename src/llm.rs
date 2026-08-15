@@ -1,8 +1,8 @@
-use std::{error::Error, time::Duration};
+use std::time::Duration;
 
 use serde::{Deserialize, Serialize};
 
-use crate::config;
+use crate::{config, error::Error};
 
 #[derive(Serialize, Deserialize, Debug)]
 struct Message {
@@ -33,7 +33,7 @@ struct ChatResponse {
     choices: Vec<Choice>,
 }
 
-pub async fn request(cfg: config::Config, message_text: &str) -> Result<String, Box<dyn Error>> {
+pub async fn request(cfg: config::Config, message_text: &str) -> Result<String, Error> {
     let message = Message {
         role: String::from("user"),
         content: String::from(message_text),
@@ -62,14 +62,14 @@ pub async fn request(cfg: config::Config, message_text: &str) -> Result<String, 
     let body = resp.text().await?;
 
     if !status.is_success() {
-        return Err(format!("unexpected response status {status}: {body}").into());
+        return Err(Error::Api { status, body });
     }
 
     let parsed_resp: ChatResponse = serde_json::from_str(&body)?;
     let llm_response = parsed_resp
         .choices
         .first()
-        .ok_or("no valid choices from LLM")?
+        .ok_or(Error::NoChoices)?
         .message
         .content
         .clone();

@@ -1,5 +1,5 @@
-use chat_llm::{config, llm};
-use std::{env, error::Error, process::ExitCode};
+use chat_llm::{config, error::Error, llm};
+use std::{env, process::ExitCode};
 
 #[tokio::main(flavor = "multi_thread")]
 async fn main() -> ExitCode {
@@ -15,7 +15,7 @@ async fn main() -> ExitCode {
     }
 }
 
-async fn run() -> Result<String, Box<dyn Error>> {
+async fn run() -> Result<String, Error> {
     let args: Vec<String> = env::args().collect();
 
     let cfg = config::from_env()?;
@@ -24,7 +24,7 @@ async fn run() -> Result<String, Box<dyn Error>> {
         .get(1)
         .map(|s| s.trim())
         .filter(|s| !s.is_empty())
-        .ok_or("no text specified")?;
+        .ok_or(Error::NoPrompt)?;
 
     let llm_response = llm::request(cfg, message).await?;
 
