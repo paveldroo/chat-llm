@@ -33,45 +33,62 @@ struct ChatResponse {
     choices: Vec<Choice>,
 }
 
-pub async fn request(cfg: config::Config, message_text: &str) -> Result<String, Error> {
-    let message = Message {
-        role: String::from("user"),
-        content: String::from(message_text),
-    };
-    let req = ChatRequest {
-        model: cfg.model_name,
-        messages: vec![message],
-        chat_template_kwargs: Some(ChatTemplateKwargs {
-            enable_thinking: false,
-        }),
-    };
+pub struct Client {
+    http: reqwest::Client,
+    cfg: config::Config,
+}
 
-    let client = reqwest::Client::builder()
-        .connect_timeout(Duration::from_secs(5))
-        .timeout(Duration::from_secs(30))
-        .build()?;
+impl Client {
+    pub fn new(cfg: config::Config) -> Result<Self, Error> {
+        let client = reqwest::Client::builder()
+            .connect_timeout(Duration::from_secs(5))
+            .timeout(Duration::from_secs(30))
+            .build()?;
 
-    let resp = client
-        .post(cfg.llm_url)
-        .bearer_auth(cfg.llm_api_key)
-        .json(&req)
-        .send()
-        .await?;
-
-    let status = resp.status();
-    let body = resp.text().await?;
-
-    if !status.is_success() {
-        return Err(Error::Api { status, body });
+        let client = Self { http: client, cfg };
+        Ok(client)
     }
 
-    let parsed_resp: ChatResponse = serde_json::from_str(&body)?;
-    let llm_response = parsed_resp
+    pub async fn request(self, message_text: &str) -> Result<String, Error> {
+        let message = Message {
+            role: String::from("user"),
+            content: String::from(message_text),
+        };
+        let req = ChatRequest {
+            model: self.cfg.model_name,
+            messages: vec![message],
+            chat_template_kwargs: Some(ChatTemplateKwargs {
+                enable_thinking: false,
+            }),
+        };
+
+        let resp = self
+            .http
+            .post(self.cfg.llm_url)
+            .bearer_auth(self.cfg.llm_api_key)
+            .json(&req)
+            .send()
+            .await?;
+
+        let status = resp.status();
+        let body = resp.text().await?;
+
+        if !status.is_success() {
+            return Err(Error::Api { status, body });
+        }
+
+        let llm_response = parse_response(&body)?;
+        Ok(llm_response)
+    }
+}
+
+fn parse_response(body: &str) -> Result<String, Error> {
+    let parsed_resp: ChatResponse = serde_json::from_str(body)?;
+    return Ok(parsed_resp
         .choices
         .first()
         .ok_or(Error::NoChoices)?
         .message
         .content
-        .clone();
-    Ok(llm_response)
+        .clone());
 }

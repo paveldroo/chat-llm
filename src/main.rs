@@ -26,7 +26,9 @@ async fn run() -> Result<String, Error> {
         .filter(|s| !s.is_empty())
         .ok_or(Error::NoPrompt)?;
 
-    let llm_response = llm::request(cfg, message).await?;
+    let llm_client = llm::Client::new(cfg)?;
+
+    let llm_response = llm_client.request(message).await?;
 
     Ok(llm_response)
 }
