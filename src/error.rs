@@ -8,7 +8,7 @@ pub enum Error {
     #[error("{0}")]
     Env(#[from] envy::Error),
 
-    #[error("no text specified")]
+    #[error("no prompt specified")]
     NoPrompt,
 
     #[error("request failed: {0}")]

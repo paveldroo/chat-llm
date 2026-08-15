@@ -43,7 +43,7 @@ fn no_argument() {
     cmd.assert()
         .failure()
         .stdout("")
-        .stderr("chat-llm: no text specified\n");
+        .stderr("chat-llm: no prompt specified\n");
 }
 
 #[test]
@@ -55,7 +55,7 @@ fn empty_text() {
     cmd.assert()
         .failure()
         .stdout("")
-        .stderr("chat-llm: no text specified\n");
+        .stderr("chat-llm: no prompt specified\n");
 }
 
 #[tokio::test(flavor = "multi_thread")]
