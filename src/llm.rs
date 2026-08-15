@@ -49,13 +49,13 @@ impl Client {
         Ok(client)
     }
 
-    pub async fn request(self, message_text: &str) -> Result<String, Error> {
+    pub async fn request(&self, message_text: &str) -> Result<String, Error> {
         let message = Message {
             role: String::from("user"),
             content: String::from(message_text),
         };
         let req = ChatRequest {
-            model: self.cfg.model_name,
+            model: self.cfg.model_name.clone(),
             messages: vec![message],
             chat_template_kwargs: Some(ChatTemplateKwargs {
                 enable_thinking: false,
@@ -64,8 +64,8 @@ impl Client {
 
         let resp = self
             .http
-            .post(self.cfg.llm_url)
-            .bearer_auth(self.cfg.llm_api_key)
+            .post(self.cfg.llm_url.clone())
+            .bearer_auth(self.cfg.llm_api_key.clone())
             .json(&req)
             .send()
             .await?;
@@ -91,4 +91,35 @@ fn parse_response(body: &str) -> Result<String, Error> {
         .message
         .content
         .clone());
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    const LLM_RESPONSE: &str = r#"{"id":"60ed5df9e86f43e090410461ae2f790b","object":"chat.completion","created":1786717946,"model":"qwen35-397b-a17b-fp8","choices":[{"index":0,"message":{"role":"assistant","content":"Paris","reasoning_content":null,"tool_calls":null},"logprobs":null,"finish_reason":"stop","matched_stop":248046}],"usage":{"prompt_tokens":25,"total_tokens":27,"completion_tokens":2,"prompt_tokens_details":null,"reasoning_tokens":0},"metadata":{"weight_version":"default"}}"#;
+
+    #[test]
+    fn extract_first_choice() {
+        assert!(matches!(
+            parse_response(LLM_RESPONSE).as_deref(),
+            Ok("Paris")
+        ));
+    }
+
+    #[test]
+    fn empty_choices_is_error() {
+        assert!(matches!(
+            parse_response(r#"{"choices":[]}"#),
+            Err(Error::NoChoices)
+        ));
+    }
+
+    #[test]
+    fn malformed_json_is_decode_error() {
+        assert!(matches!(
+            parse_response(r#"{"choices":[]}}}}"#),
+            Err(Error::Decode(_))
+        ));
+    }
 }
