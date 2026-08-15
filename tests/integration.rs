@@ -16,6 +16,7 @@ fn set_all_envs(cmd: &mut Command) {
 fn corrupted_envs() {
     let mut cmd = cargo_bin_cmd!("chat-llm");
     cmd.env_clear();
+    cmd.arg("test arg");
     cmd.assert()
         .failure()
         .stdout("")
@@ -29,6 +30,7 @@ fn empty_envs() {
     cmd.env("LLM_API_KEY", "");
     cmd.env("LLM_URL", "");
     cmd.env("MODEL_NAME", "");
+    cmd.arg("test arg");
     cmd.assert()
         .failure()
         .stdout("")
