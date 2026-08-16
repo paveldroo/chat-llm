@@ -140,16 +140,11 @@ fn parse_stream_response(body: &str) -> Result<String, Error> {
         return Ok(String::new());
     }
     let chunk: ChatStreamChunk = serde_json::from_str(body)?;
-    if chunk.choices.is_empty() {
-        return Ok(String::new());
-    }
     Ok(chunk
         .choices
-        .first()
-        .unwrap()
-        .delta
-        .content
-        .clone()
+        .into_iter()
+        .next()
+        .and_then(|choice| choice.delta.content)
         .unwrap_or_default())
 }
 
