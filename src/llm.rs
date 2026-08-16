@@ -26,16 +26,6 @@ struct ChatRequest {
 }
 
 #[derive(Deserialize, Debug)]
-struct Choice {
-    message: Message,
-}
-
-#[derive(Deserialize)]
-struct ChatResponse {
-    choices: Vec<Choice>,
-}
-
-#[derive(Deserialize, Debug)]
 struct Delta {
     content: Option<String>,
 }
@@ -64,39 +54,6 @@ impl Client {
 
         let client = Self { http: client, cfg };
         Ok(client)
-    }
-
-    pub async fn request(&self, message_text: &str) -> Result<String, Error> {
-        let message = Message {
-            role: String::from("user"),
-            content: String::from(message_text),
-        };
-        let req = ChatRequest {
-            model: self.cfg.model_name.clone(),
-            messages: vec![message],
-            chat_template_kwargs: Some(ChatTemplateKwargs {
-                enable_thinking: false,
-            }),
-            stream: false,
-        };
-
-        let resp = self
-            .http
-            .post(self.cfg.llm_url.clone())
-            .bearer_auth(self.cfg.llm_api_key.clone())
-            .json(&req)
-            .send()
-            .await?;
-
-        let status = resp.status();
-        let body = resp.text().await?;
-
-        if !status.is_success() {
-            return Err(Error::Api { status, body });
-        }
-
-        let llm_response = parse_response(&body)?;
-        Ok(llm_response)
     }
 
     pub async fn stream_request(&mut self, message_text: &str) -> Result<String, Error> {
@@ -136,28 +93,31 @@ impl Client {
         while let Some(chunk_result) = stream.next().await {
             let chunk = chunk_result?;
             buffer.extend(chunk.as_ref());
+            lines_from_chunk(&mut buffer);
 
-            let complete_lines = process_buffer(&mut buffer);
-
-            let mut text = String::new();
-
-            for line in complete_lines {
-                let (_, json_part) = line.as_str().split_at(6);
-                let llm_response = parse_stream_response(json_part.trim())?;
-                text.push_str(llm_response.as_str());
-            }
-            print!("{text}");
+            print!("{}", render(lines_from_chunk(&mut buffer))?);
         }
+
+        print!("{}", render(lines_at_eof(&mut buffer))?);
 
         Ok(String::new())
     }
 }
 
-fn process_buffer(buffer: &mut Vec<u8>) -> Vec<String> {
+fn lines_from_chunk(buffer: &mut Vec<u8>) -> Vec<String> {
     let Some(end) = buffer.iter().rposition(|&b| b == b'\n') else {
         return Vec::new();
     };
 
+    take_lines(buffer, end + 1)
+}
+
+fn lines_at_eof(buffer: &mut Vec<u8>) -> Vec<String> {
+    let end = buffer.len();
+    take_lines(buffer, end)
+}
+
+fn take_lines(buffer: &mut Vec<u8>, end: usize) -> Vec<String> {
     let complete: Vec<u8> = buffer.drain(..=end).collect();
     complete
         .split(|&b| b == b'\n')
@@ -166,9 +126,14 @@ fn process_buffer(buffer: &mut Vec<u8>) -> Vec<String> {
         .collect()
 }
 
-fn parse_response(body: &str) -> Result<String, Error> {
-    let parsed_resp: ChatResponse = serde_json::from_str(body)?;
-    return Ok(parsed_resp.choices.first().unwrap().message.content.clone());
+fn render(lines: Vec<String>) -> Result<String, Error> {
+    let mut text = String::new();
+    for line in lines {
+        let (_, json_part) = line.as_str().split_at(6);
+        text.push_str(&parse_stream_response(json_part.trim())?);
+    }
+
+    Ok(text)
 }
 
 fn parse_stream_response(body: &str) -> Result<String, Error> {
@@ -186,7 +151,7 @@ fn parse_stream_response(body: &str) -> Result<String, Error> {
         .delta
         .content
         .clone()
-        .unwrap_or(String::new()))
+        .unwrap_or_default())
 }
 
 #[cfg(test)]
@@ -198,7 +163,7 @@ mod tests {
     #[test]
     fn extract_first_choice() {
         assert!(matches!(
-            parse_response(LLM_RESPONSE).as_deref(),
+            parse_stream_response(LLM_RESPONSE).as_deref(),
             Ok("Paris")
         ));
     }
@@ -206,7 +171,7 @@ mod tests {
     #[test]
     fn malformed_json_is_decode_error() {
         assert!(matches!(
-            parse_response(r#"{"choices":[]}}}}"#),
+            parse_stream_response(r#"{"choices":[]}}}}"#),
             Err(Error::Decode(_))
         ));
     }
