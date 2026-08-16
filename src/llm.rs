@@ -99,7 +99,7 @@ impl Client {
         Ok(llm_response)
     }
 
-    pub async fn stream_request(&self, message_text: &str) -> Result<String, Error> {
+    pub async fn stream_request(&mut self, message_text: &str) -> Result<String, Error> {
         let message = Message {
             role: String::from("user"),
             content: String::from(message_text),
@@ -127,19 +127,41 @@ impl Client {
                 status,
                 body: res.text().await?,
             });
-        };
+        }
 
         let mut stream = res.bytes_stream();
 
+        let mut buffer: Vec<u8> = vec![];
+
         while let Some(chunk_result) = stream.next().await {
             let chunk = chunk_result?;
-            println!("received chunk: {:?}", chunk);
-            let llm_response = parse_stream_response(chunk.as_ref())?;
-            println!("received response: {}", llm_response)
+            buffer.extend(chunk.as_ref());
+
+            let complete_lines = process_buffer(&mut buffer);
+
+            for line in complete_lines {
+                let (_, json_part) = line.as_str().split_at(6);
+                // println!("{json_part}");
+                let llm_response = parse_stream_response(json_part.trim()).unwrap();
+                println!("{llm_response}");
+            }
         }
 
         Ok(String::from("123"))
     }
+}
+
+fn process_buffer(buffer: &mut Vec<u8>) -> Vec<String> {
+    let Some(end) = buffer.iter().rposition(|&b| b == b'\n') else {
+        return Vec::new();
+    };
+
+    let complete: Vec<u8> = buffer.drain(..=end).collect();
+    complete
+        .split(|&b| b == b'\n')
+        .map(|line| String::from_utf8_lossy(line).trim().to_string())
+        .filter(|line| !line.is_empty())
+        .collect()
 }
 
 fn parse_response(body: &str) -> Result<String, Error> {
@@ -153,27 +175,9 @@ fn parse_response(body: &str) -> Result<String, Error> {
         .clone());
 }
 
+fn parse_stream_response(body: &str) -> Result<String, Error> {
 
-/*
-1. chunk ≠ SSE frame. bytes_stream() yields TCP chunks. One chunk can hold several
-data: lines, or half of one. You need a byte buffer, drain up to each \n, parse
-complete lines only.
-2. Blank lines. Frames are separated by \n\n — empty lines must be skipped, not
-parsed.
-3. [DONE]. Final sentinel, not JSON.
-4. .unwrap() on content — panics. content is null on reasoning deltas and on the
-final finish_reason chunk.
-5. NoChoices on choices: [] — normal for the trailing usage chunk, shouldn't be an
-error mid-stream.
-6. chunk_result.unwrap() — panics on a mid-stream transport error; use ?.
-7. .timeout(Duration::from_secs(30)) applies to the whole body for streams, so any
-answer longer than 30 s aborts. Use .read_timeout(...) instead (per-read idle
-timeout).
-8. Ok(String::from("123")) — accumulate deltas and return them.
-*/
-
-fn parse_stream_response(body: &[u8]) -> Result<String, Error> {
-    let parsed_resp: ChatStreamChunk = serde_json::from_slice(body)?;
+    let parsed_resp: ChatStreamChunk = serde_json::from_str(body)?;
     return Ok(parsed_resp
         .choices
         .first()
