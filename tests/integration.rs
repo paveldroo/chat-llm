@@ -4,7 +4,22 @@ use wiremock::{
     matchers::{method, path},
 };
 
-const LLM_RESPONSE: &str = r#"{"id":"60ed5df9e86f43e090410461ae2f790b","object":"chat.completion","created":1786717946,"model":"qwen35-397b-a17b-fp8","choices":[{"index":0,"message":{"role":"assistant","content":"Paris","reasoning_content":null,"tool_calls":null},"logprobs":null,"finish_reason":"stop","matched_stop":248046}],"usage":{"prompt_tokens":25,"total_tokens":27,"completion_tokens":2,"prompt_tokens_details":null,"reasoning_tokens":0},"metadata":{"weight_version":"default"}}"#;
+const SSE_RESPONSE: &str = r#"data:
+{"id":"c0","object":"chat.completion.chunk","model":"qwen35-397b-a17b-fp8","choi
+ces":[{"index":0,"delta":{"role":"assistant"},"finish_reason":null}]}
+
+: ping
+
+data: {"id":"c0","object":"chat.completion.chunk","model":"qwen35-397b-a17b-fp8"
+,"choices":[{"index":0,"delta":{"content":"Pa"},"finish_reason":null}]}
+
+data: {"id":"c0","object":"chat.completion.chunk","model":"qwen35-397b-a17b-fp8"
+,"choices":[{"index":0,"delta":{"content":"ris"},"finish_reason":null}]}
+
+data: {"id":"c0","object":"chat.completion.chunk","model":"qwen35-397b-a17b-fp8"
+,"choices":[{"index":0,"delta":{},"finish_reason":"stop"}]}
+
+data: [DONE]"#;
 
 fn set_all_envs(cmd: &mut Command) {
     cmd.env("LLM_API_KEY", "test");
@@ -64,7 +79,7 @@ fn empty_text() {
 async fn success() {
     let mock_server = MockServer::start().await;
 
-    let mock_response = ResponseTemplate::new(200).set_body_raw(LLM_RESPONSE, "application/json");
+    let mock_response = ResponseTemplate::new(200).set_body_raw(SSE_RESPONSE, "text/event-stream");
 
     Mock::given(method("POST"))
         .and(path("/"))

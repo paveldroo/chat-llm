@@ -155,13 +155,21 @@ fn parse_stream_response(body: &str) -> Result<String, Error> {
 mod tests {
     use super::*;
 
-    const LLM_RESPONSE: &str = r#"{"id":"60ed5df9e86f43e090410461ae2f790b","object":"chat.completion","created":1786717946,"model":"qwen35-397b-a17b-fp8","choices":[{"index":0,"message":{"role":"assistant","content":"Paris","reasoning_content":null,"tool_calls":null},"logprobs":null,"finish_reason":"stop","matched_stop":248046}],"usage":{"prompt_tokens":25,"total_tokens":27,"completion_tokens":2,"prompt_tokens_details":null,"reasoning_tokens":0},"metadata":{"weight_version":"default"}}"#;
+    const DELTA_CHUNK: &str = r#"{"id":"c0","object":"chat.completion.chunk","choices":[{"index":0,"delta":{"content":"Paris"},"finish_reason":null}]}"#;
 
     #[test]
-    fn extract_first_choice() {
+    fn extract_delta_content() {
         assert!(matches!(
-            parse_stream_response(LLM_RESPONSE).as_deref(),
+            parse_stream_response(DELTA_CHUNK).as_deref(),
             Ok("Paris")
+        ));
+    }
+
+    #[test]
+    fn comment_lines_are_skipped() {
+        assert!(matches!(
+            render(vec![":".to_string(), ": ping".to_string()]).as_deref(),
+            Ok("")
         ));
     }
 
