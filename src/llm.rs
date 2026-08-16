@@ -127,14 +127,16 @@ fn take_lines(buffer: &mut Vec<u8>, end: usize) -> Vec<String> {
 fn render(lines: Vec<String>) -> Result<String, Error> {
     let mut text = String::new();
     for line in lines {
-        let (_, json_part) = line.as_str().split_at(6);
+        let Some(json_part) = line.as_str().strip_prefix("data:") else {
+            continue;
+        };
         text.push_str(&parse_stream_response(json_part.trim())?);
     }
     Ok(text)
 }
 
 fn parse_stream_response(body: &str) -> Result<String, Error> {
-    if body == "[DONE]" {
+    if body == "[DONE]" || body.is_empty() {
         return Ok(String::new());
     }
     let chunk: ChatStreamChunk = serde_json::from_str(body)?;

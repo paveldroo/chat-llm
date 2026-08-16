@@ -4,22 +4,7 @@ use wiremock::{
     matchers::{method, path},
 };
 
-const SSE_RESPONSE: &str = r#"data:
-{"id":"c0","object":"chat.completion.chunk","model":"qwen35-397b-a17b-fp8","choi
-ces":[{"index":0,"delta":{"role":"assistant"},"finish_reason":null}]}
-
-: ping
-
-data: {"id":"c0","object":"chat.completion.chunk","model":"qwen35-397b-a17b-fp8"
-,"choices":[{"index":0,"delta":{"content":"Pa"},"finish_reason":null}]}
-
-data: {"id":"c0","object":"chat.completion.chunk","model":"qwen35-397b-a17b-fp8"
-,"choices":[{"index":0,"delta":{"content":"ris"},"finish_reason":null}]}
-
-data: {"id":"c0","object":"chat.completion.chunk","model":"qwen35-397b-a17b-fp8"
-,"choices":[{"index":0,"delta":{},"finish_reason":"stop"}]}
-
-data: [DONE]"#;
+const SSE_RESPONSE: &str = include_str!("fixtures/paris.sse");
 
 fn set_all_envs(cmd: &mut Command) {
     cmd.env("LLM_API_KEY", "test");

@@ -1,0 +1,11 @@
+data: {"id":"c0","object":"chat.completion.chunk","model":"qwen35-397b-a17b-fp8","choices":[{"index":0,"delta":{"role":"assistant"},"finish_reason":null}]}
+
+: ping
+
+data: {"id":"c0","object":"chat.completion.chunk","model":"qwen35-397b-a17b-fp8","choices":[{"index":0,"delta":{"content":"Pa"},"finish_reason":null}]}
+
+data: {"id":"c0","object":"chat.completion.chunk","model":"qwen35-397b-a17b-fp8","choices":[{"index":0,"delta":{"content":"ris"},"finish_reason":null}]}
+
+data: {"id":"c0","object":"chat.completion.chunk","model":"qwen35-397b-a17b-fp8","choices":[{"index":0,"delta":{},"finish_reason":"stop"}]}
+
+data: [DONE]
