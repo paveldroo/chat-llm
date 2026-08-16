@@ -1,3 +1,4 @@
+use futures_util::StreamExt;
 use std::time::Duration;
 
 use serde::{Deserialize, Serialize};
@@ -21,6 +22,7 @@ struct ChatRequest {
     messages: Vec<Message>,
     #[serde(skip_serializing_if = "Option::is_none")]
     chat_template_kwargs: Option<ChatTemplateKwargs>,
+    stream: bool,
 }
 
 #[derive(Deserialize, Debug)]
@@ -33,6 +35,21 @@ struct ChatResponse {
     choices: Vec<Choice>,
 }
 
+#[derive(Deserialize, Debug)]
+struct Delta {
+    content: Option<String>,
+}
+
+#[derive(Deserialize, Debug)]
+struct StreamChoice {
+    delta: Delta,
+}
+
+#[derive(Deserialize, Debug)]
+struct ChatStreamChunk {
+    choices: Vec<StreamChoice>,
+}
+
 pub struct Client {
     http: reqwest::Client,
     cfg: config::Config,
@@ -42,7 +59,7 @@ impl Client {
     pub fn new(cfg: config::Config) -> Result<Self, Error> {
         let client = reqwest::Client::builder()
             .connect_timeout(Duration::from_secs(5))
-            .timeout(Duration::from_secs(30))
+            .read_timeout(Duration::from_secs(30))
             .build()?;
 
         let client = Self { http: client, cfg };
@@ -60,6 +77,7 @@ impl Client {
             chat_template_kwargs: Some(ChatTemplateKwargs {
                 enable_thinking: false,
             }),
+            stream: false,
         };
 
         let resp = self
@@ -80,6 +98,48 @@ impl Client {
         let llm_response = parse_response(&body)?;
         Ok(llm_response)
     }
+
+    pub async fn stream_request(&self, message_text: &str) -> Result<String, Error> {
+        let message = Message {
+            role: String::from("user"),
+            content: String::from(message_text),
+        };
+        let req = ChatRequest {
+            model: self.cfg.model_name.clone(),
+            messages: vec![message],
+            chat_template_kwargs: Some(ChatTemplateKwargs {
+                enable_thinking: true,
+            }),
+            stream: true,
+        };
+
+        let res = self
+            .http
+            .post(self.cfg.llm_url.clone())
+            .bearer_auth(self.cfg.llm_api_key.clone())
+            .json(&req)
+            .send()
+            .await?;
+
+        let status = res.status();
+        if !status.is_success() {
+            return Err(Error::Api {
+                status,
+                body: res.text().await?,
+            });
+        };
+
+        let mut stream = res.bytes_stream();
+
+        while let Some(chunk_result) = stream.next().await {
+            let chunk = chunk_result?;
+            println!("received chunk: {:?}", chunk);
+            let llm_response = parse_stream_response(chunk.as_ref())?;
+            println!("received response: {}", llm_response)
+        }
+
+        Ok(String::from("123"))
+    }
 }
 
 fn parse_response(body: &str) -> Result<String, Error> {
@@ -91,6 +151,37 @@ fn parse_response(body: &str) -> Result<String, Error> {
         .message
         .content
         .clone());
+}
+
+
+/*
+1. chunk ≠ SSE frame. bytes_stream() yields TCP chunks. One chunk can hold several
+data: lines, or half of one. You need a byte buffer, drain up to each \n, parse
+complete lines only.
+2. Blank lines. Frames are separated by \n\n — empty lines must be skipped, not
+parsed.
+3. [DONE]. Final sentinel, not JSON.
+4. .unwrap() on content — panics. content is null on reasoning deltas and on the
+final finish_reason chunk.
+5. NoChoices on choices: [] — normal for the trailing usage chunk, shouldn't be an
+error mid-stream.
+6. chunk_result.unwrap() — panics on a mid-stream transport error; use ?.
+7. .timeout(Duration::from_secs(30)) applies to the whole body for streams, so any
+answer longer than 30 s aborts. Use .read_timeout(...) instead (per-read idle
+timeout).
+8. Ok(String::from("123")) — accumulate deltas and return them.
+*/
+
+fn parse_stream_response(body: &[u8]) -> Result<String, Error> {
+    let parsed_resp: ChatStreamChunk = serde_json::from_slice(body)?;
+    return Ok(parsed_resp
+        .choices
+        .first()
+        .ok_or(Error::NoChoices)?
+        .delta
+        .content
+        .clone()
+        .unwrap());
 }
 
 #[cfg(test)]
