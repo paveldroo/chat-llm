@@ -117,12 +117,11 @@ fn lines_at_eof(buffer: &mut Vec<u8>) -> Vec<String> {
 
 fn take_lines(buffer: &mut Vec<u8>, end: usize) -> Vec<String> {
     let complete: Vec<u8> = buffer.drain(..end).collect();
-    let res = complete
+    complete
         .split(|&b| b == b'\n')
         .map(|line| String::from_utf8_lossy(line).trim().to_string())
         .filter(|line| !line.is_empty())
-        .collect();
-    res
+        .collect()
 }
 
 fn render(lines: Vec<String>) -> Result<String, Error> {
@@ -172,5 +171,21 @@ mod tests {
             parse_stream_response(r#"{"choices":[]}}}}"#),
             Err(Error::Decode(_))
         ));
+    }
+
+    #[test]
+    fn tail_without_newline_is_flushed_at_eof() {
+        let mut buffer = b"data: {\"a\":1}".to_vec();
+        assert!(lines_from_chunk(&mut buffer).is_empty());
+        assert_eq!(lines_at_eof(&mut buffer), ["data: {\"a\":1}"]);
+        assert!(buffer.is_empty());
+    }
+
+    #[test]
+    fn line_split_across_chunks_is_held_then_emitted() {
+        let mut buffer = b"data: {\"a".to_vec();
+        assert!(lines_from_chunk(&mut buffer).is_empty());
+        buffer.extend_from_slice(b"\":1}\n");
+        assert_eq!(lines_from_chunk(&mut buffer), ["data: {\"a\":1}"]);
     }
 }
