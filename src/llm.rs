@@ -93,8 +93,6 @@ impl Client {
         while let Some(chunk_result) = stream.next().await {
             let chunk = chunk_result?;
             buffer.extend(chunk.as_ref());
-            lines_from_chunk(&mut buffer);
-
             print!("{}", render(lines_from_chunk(&mut buffer))?);
         }
 
@@ -118,12 +116,13 @@ fn lines_at_eof(buffer: &mut Vec<u8>) -> Vec<String> {
 }
 
 fn take_lines(buffer: &mut Vec<u8>, end: usize) -> Vec<String> {
-    let complete: Vec<u8> = buffer.drain(..=end).collect();
-    complete
+    let complete: Vec<u8> = buffer.drain(..end).collect();
+    let res = complete
         .split(|&b| b == b'\n')
         .map(|line| String::from_utf8_lossy(line).trim().to_string())
         .filter(|line| !line.is_empty())
-        .collect()
+        .collect();
+    res
 }
 
 fn render(lines: Vec<String>) -> Result<String, Error> {
@@ -132,7 +131,6 @@ fn render(lines: Vec<String>) -> Result<String, Error> {
         let (_, json_part) = line.as_str().split_at(6);
         text.push_str(&parse_stream_response(json_part.trim())?);
     }
-
     Ok(text)
 }
 

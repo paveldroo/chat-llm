@@ -3,7 +3,7 @@ set dotenv-load := true
 export PROJECT_NAME := "chat-llm"
 
 run:
-    cargo run -- "what is the capital of France in one word?"
+    RUST_BACKTRACE=1 cargo run -- "what is the capital of France in one word?"
 
 lint:
     cargo fmt
