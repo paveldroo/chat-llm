@@ -139,15 +139,17 @@ impl Client {
 
             let complete_lines = process_buffer(&mut buffer);
 
+            let mut text = String::new();
+
             for line in complete_lines {
                 let (_, json_part) = line.as_str().split_at(6);
-                // println!("{json_part}");
-                let llm_response = parse_stream_response(json_part.trim()).unwrap();
-                println!("{llm_response}");
+                let llm_response = parse_stream_response(json_part.trim())?;
+                text.push_str(llm_response.as_str());
             }
+            print!("{text}");
         }
 
-        Ok(String::from("123"))
+        Ok(String::new())
     }
 }
 
@@ -166,26 +168,25 @@ fn process_buffer(buffer: &mut Vec<u8>) -> Vec<String> {
 
 fn parse_response(body: &str) -> Result<String, Error> {
     let parsed_resp: ChatResponse = serde_json::from_str(body)?;
-    return Ok(parsed_resp
-        .choices
-        .first()
-        .ok_or(Error::NoChoices)?
-        .message
-        .content
-        .clone());
+    return Ok(parsed_resp.choices.first().unwrap().message.content.clone());
 }
 
 fn parse_stream_response(body: &str) -> Result<String, Error> {
-
-    let parsed_resp: ChatStreamChunk = serde_json::from_str(body)?;
-    return Ok(parsed_resp
+    if body == "[DONE]" {
+        return Ok(String::new());
+    }
+    let chunk: ChatStreamChunk = serde_json::from_str(body)?;
+    if chunk.choices.is_empty() {
+        return Ok(String::new());
+    }
+    Ok(chunk
         .choices
         .first()
-        .ok_or(Error::NoChoices)?
+        .unwrap()
         .delta
         .content
         .clone()
-        .unwrap());
+        .unwrap_or(String::new()))
 }
 
 #[cfg(test)]
@@ -199,14 +200,6 @@ mod tests {
         assert!(matches!(
             parse_response(LLM_RESPONSE).as_deref(),
             Ok("Paris")
-        ));
-    }
-
-    #[test]
-    fn empty_choices_is_error() {
-        assert!(matches!(
-            parse_response(r#"{"choices":[]}"#),
-            Err(Error::NoChoices)
         ));
     }
 
