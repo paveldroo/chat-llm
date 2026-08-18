@@ -5,9 +5,9 @@ use serde::{Deserialize, Serialize};
 
 use crate::{config, error::Error};
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Message {
-    role: String,
+    pub role: String,
     pub content: String,
 }
 
@@ -56,14 +56,10 @@ impl Client {
         Ok(client)
     }
 
-    pub async fn stream_request(&self, message_text: &str) -> Result<String, Error> {
-        let message = Message {
-            role: String::from("user"),
-            content: String::from(message_text),
-        };
+    pub async fn stream_request(&self, messages: &[Message]) -> Result<String, Error> {
         let req = ChatRequest {
             model: self.cfg.model_name.clone(),
-            messages: vec![message],
+            messages: messages.to_vec(),
             chat_template_kwargs: Some(ChatTemplateKwargs {
                 enable_thinking: false,
             }),

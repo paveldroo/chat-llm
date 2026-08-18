@@ -1,4 +1,9 @@
-use chat_llm::{cli, config, error::Error, llm};
+use chat_llm::{
+    cli, config,
+    conversation::Conversation,
+    error::Error,
+    llm::{self, Message},
+};
 use clap::Parser;
 use std::{io, io::Write, process::ExitCode};
 
@@ -15,12 +20,12 @@ async fn main() -> ExitCode {
 
 async fn run() -> Result<(), Error> {
     let cli = cli::Cli::parse();
-    let message = cli.prompt.as_deref().map(str::trim).unwrap_or_default();
+    let input = cli.prompt.as_deref().map(str::trim).unwrap_or_default();
     let cfg = config::from_env()?;
     let llm_client = llm::Client::new(cfg)?;
 
-    if message.is_empty() {
-        let mut context = String::new();
+    if input.is_empty() {
+        let mut conversation = Conversation { messages: vec![] };
         loop {
             {
                 let mut out = std::io::stdout().lock();
@@ -36,21 +41,30 @@ async fn run() -> Result<(), Error> {
             if trimmed_input.is_empty() {
                 continue;
             }
-            context.push_str("\nUSER INPUT:\n");
-            context.push_str(trimmed_input);
-            context.push('\n');
-            let res = llm_client.stream_request(&context).await?;
+            let user_message = Message {
+                role: "user".to_string(),
+                content: trimmed_input.to_string(),
+            };
+            conversation.messages.push(user_message);
+            let res = llm_client.stream_request(&conversation.messages).await?;
             {
                 let mut out = std::io::stdout().lock();
                 writeln!(out)?;
                 out.flush()?;
             }
-            context.push_str("\nLLM_RESPONSE:\n");
-            context.push_str(&res);
-            context.push('\n');
+
+            let llm_message = Message {
+                role: "assistant".to_string(),
+                content: res,
+            };
+            conversation.messages.push(llm_message);
         }
     } else {
-        llm_client.stream_request(message).await?;
+        let message = Message {
+            role: "user".to_string(),
+            content: input.trim().to_string(),
+        };
+        llm_client.stream_request(&[message]).await?;
         {
             let mut out = std::io::stdout().lock();
             writeln!(out)?;
