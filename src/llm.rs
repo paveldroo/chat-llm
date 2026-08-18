@@ -101,7 +101,7 @@ impl Client {
         }
 
         let tail = render(lines_at_eof(&mut buffer))?;
-        writeln!(out, "{tail}")?;
+        write!(out, "{tail}")?;
         out.flush()?;
         answer.push_str(&tail);
 
