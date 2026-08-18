@@ -22,4 +22,7 @@ pub enum Error {
 
     #[error("malformed response: {0}")]
     Decode(#[from] serde_json::Error),
+
+    #[error(transparent)]
+    Io(#[from] std::io::Error),
 }

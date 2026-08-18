@@ -1,5 +1,5 @@
 use futures_util::StreamExt;
-use std::time::Duration;
+use std::{io::Write, time::Duration};
 
 use serde::{Deserialize, Serialize};
 
@@ -65,7 +65,7 @@ impl Client {
             model: self.cfg.model_name.clone(),
             messages: vec![message],
             chat_template_kwargs: Some(ChatTemplateKwargs {
-                enable_thinking: true,
+                enable_thinking: false,
             }),
             stream: true,
         };
@@ -87,18 +87,25 @@ impl Client {
         }
 
         let mut stream = res.bytes_stream();
-
         let mut buffer: Vec<u8> = vec![];
+        let mut answer = String::new();
+        let mut out = std::io::stdout().lock();
 
         while let Some(chunk_result) = stream.next().await {
             let chunk = chunk_result?;
             buffer.extend(chunk.as_ref());
-            print!("{}", render(lines_from_chunk(&mut buffer))?);
+            let text = render(lines_from_chunk(&mut buffer))?;
+            write!(out, "{text}")?;
+            out.flush()?;
+            answer.push_str(&text);
         }
 
-        print!("{}", render(lines_at_eof(&mut buffer))?);
+        let tail = render(lines_at_eof(&mut buffer))?;
+        writeln!(out, "{tail}")?;
+        out.flush()?;
+        answer.push_str(&tail);
 
-        Ok(String::new())
+        Ok(answer)
     }
 }
 
