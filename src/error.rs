@@ -8,9 +8,6 @@ pub enum Error {
     #[error("{0}")]
     Env(#[from] envy::Error),
 
-    #[error("no prompt specified")]
-    NoPrompt,
-
     #[error("request failed: {0}")]
     Transport(#[from] reqwest::Error),
 

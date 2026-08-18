@@ -6,20 +6,20 @@ use serde::{Deserialize, Serialize};
 use crate::{config, error::Error};
 
 #[derive(Serialize, Deserialize, Debug)]
-struct Message {
+pub struct Message {
     role: String,
-    content: String,
+    pub content: String,
 }
 
-#[derive(Serialize)]
+#[derive(Serialize, Deserialize, Debug)]
 struct ChatTemplateKwargs {
     enable_thinking: bool,
 }
 
-#[derive(Serialize)]
-struct ChatRequest {
+#[derive(Serialize, Deserialize, Debug)]
+pub struct ChatRequest {
     model: String,
-    messages: Vec<Message>,
+    pub messages: Vec<Message>,
     #[serde(skip_serializing_if = "Option::is_none")]
     chat_template_kwargs: Option<ChatTemplateKwargs>,
     stream: bool,
@@ -56,7 +56,7 @@ impl Client {
         Ok(client)
     }
 
-    pub async fn stream_request(&mut self, message_text: &str) -> Result<String, Error> {
+    pub async fn stream_request(&self, message_text: &str) -> Result<String, Error> {
         let message = Message {
             role: String::from("user"),
             content: String::from(message_text),
@@ -89,20 +89,25 @@ impl Client {
         let mut stream = res.bytes_stream();
         let mut buffer: Vec<u8> = vec![];
         let mut answer = String::new();
-        let mut out = std::io::stdout().lock();
 
         while let Some(chunk_result) = stream.next().await {
             let chunk = chunk_result?;
             buffer.extend(chunk.as_ref());
             let text = render(lines_from_chunk(&mut buffer))?;
-            write!(out, "{text}")?;
-            out.flush()?;
+            {
+                let mut out = std::io::stdout().lock();
+                write!(out, "{text}")?;
+                out.flush()?;
+            }
             answer.push_str(&text);
         }
 
         let tail = render(lines_at_eof(&mut buffer))?;
-        write!(out, "{tail}")?;
-        out.flush()?;
+        {
+            let mut out = std::io::stdout().lock();
+            write!(out, "{tail}")?;
+            out.flush()?;
+        }
         answer.push_str(&tail);
 
         Ok(answer)
