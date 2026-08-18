@@ -25,7 +25,7 @@ async fn run() -> Result<(), Error> {
     let llm_client = llm::Client::new(cfg)?;
 
     if input.is_empty() {
-        let mut conversation = Conversation { messages: vec![] };
+        let mut conversation = Conversation::new();
         loop {
             {
                 let mut out = std::io::stdout().lock();
@@ -42,8 +42,8 @@ async fn run() -> Result<(), Error> {
                 continue;
             }
             let user_message = Message::user(trimmed_input);
-            conversation.messages.push(user_message);
-            let res = llm_client.stream_request(&conversation.messages).await?;
+            conversation.push_message(user_message);
+            let res = llm_client.stream_request(conversation.as_slice()).await?;
             {
                 let mut out = std::io::stdout().lock();
                 writeln!(out)?;
@@ -51,7 +51,7 @@ async fn run() -> Result<(), Error> {
             }
 
             let llm_message = Message::assistant(&res);
-            conversation.messages.push(llm_message);
+            conversation.push_message(llm_message);
         }
     } else {
         let message = Message::user(input.trim());
