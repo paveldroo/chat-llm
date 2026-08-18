@@ -41,10 +41,7 @@ async fn run() -> Result<(), Error> {
             if trimmed_input.is_empty() {
                 continue;
             }
-            let user_message = Message {
-                role: "user".to_string(),
-                content: trimmed_input.to_string(),
-            };
+            let user_message = Message::user(trimmed_input);
             conversation.messages.push(user_message);
             let res = llm_client.stream_request(&conversation.messages).await?;
             {
@@ -53,17 +50,11 @@ async fn run() -> Result<(), Error> {
                 out.flush()?;
             }
 
-            let llm_message = Message {
-                role: "assistant".to_string(),
-                content: res,
-            };
+            let llm_message = Message::assistant(&res);
             conversation.messages.push(llm_message);
         }
     } else {
-        let message = Message {
-            role: "user".to_string(),
-            content: input.trim().to_string(),
-        };
+        let message = Message::user(input.trim());
         llm_client.stream_request(&[message]).await?;
         {
             let mut out = std::io::stdout().lock();

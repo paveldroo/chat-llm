@@ -11,6 +11,24 @@ pub struct Message {
     pub content: String,
 }
 
+impl Message {
+    #[must_use]
+    pub fn user(content: &str) -> Self {
+        Self {
+            role: "user".to_string(),
+            content: content.to_string(),
+        }
+    }
+
+    #[must_use]
+    pub fn assistant(context: &str) -> Self {
+        Self {
+            role: "assistant".to_string(),
+            content: context.to_string(),
+        }
+    }
+}
+
 #[derive(Serialize, Deserialize, Debug)]
 struct ChatTemplateKwargs {
     enable_thinking: bool,
