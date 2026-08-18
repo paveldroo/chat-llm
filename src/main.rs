@@ -41,8 +41,7 @@ async fn run() -> Result<(), Error> {
             if trimmed_input.is_empty() {
                 continue;
             }
-            let user_message = Message::user(trimmed_input);
-            conversation.push_message(user_message);
+            conversation.push_user(trimmed_input);
             let res = llm_client.stream_request(conversation.as_slice()).await?;
             {
                 let mut out = std::io::stdout().lock();
@@ -50,8 +49,7 @@ async fn run() -> Result<(), Error> {
                 out.flush()?;
             }
 
-            let llm_message = Message::assistant(&res);
-            conversation.push_message(llm_message);
+            conversation.push_assistant(&res);
         }
     } else {
         let message = Message::user(input.trim());

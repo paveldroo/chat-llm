@@ -11,8 +11,12 @@ impl Conversation {
         Self::default()
     }
 
-    pub fn push_message(&mut self, message: Message) {
-        self.messages.push(message);
+    pub fn push_user(&mut self, content: &str) {
+        self.messages.push(Message::user(content));
+    }
+
+    pub fn push_assistant(&mut self, content: &str) {
+        self.messages.push(Message::assistant(content));
     }
 
     #[must_use]
