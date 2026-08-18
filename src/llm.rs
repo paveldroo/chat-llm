@@ -86,8 +86,8 @@ impl Client {
 
         let res = self
             .http
-            .post(self.cfg.llm_url.clone())
-            .bearer_auth(self.cfg.llm_api_key.clone())
+            .post(&self.cfg.llm_url)
+            .bearer_auth(&self.cfg.llm_api_key)
             .json(&req)
             .send()
             .await?;

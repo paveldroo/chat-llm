@@ -10,17 +10,17 @@ pub struct Config {
 }
 
 pub fn from_env() -> Result<Config, Error> {
-    let config = envy::from_env::<Config>()?;
+    let c = envy::from_env::<Config>()?;
 
-    if config.llm_api_key.is_empty() {
-        return Err(Error::EmptyConfig("LLM_API_KEY"));
-    }
-    if config.llm_url.is_empty() {
-        return Err(Error::EmptyConfig("LLM_URL"));
-    }
-    if config.model_name.is_empty() {
-        return Err(Error::EmptyConfig("MODEL_NAME"));
+    for (env, val) in [
+        ("LLM_API_KEY", &c.llm_api_key),
+        ("LLM_URL", &c.llm_url),
+        ("MODEL_NAME", &c.model_name),
+    ] {
+        if val.is_empty() {
+            return Err(Error::EmptyConfig(env));
+        }
     }
 
-    Ok(config)
+    Ok(c)
 }
