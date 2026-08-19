@@ -8,7 +8,7 @@ use wiremock::{
     matchers::{method, path},
 };
 
-const SSE_RESPONSE: &str = include_str!("fixtures/paris.sse");
+// const SSE_RESPONSE: &str = include_str!("fixtures/paris.sse");
 
 fn set_all_envs(cmd: &mut Command) {
     cmd.env("LLM_API_KEY", "test");
@@ -20,7 +20,6 @@ fn set_all_envs(cmd: &mut Command) {
 fn corrupted_envs() {
     let mut cmd = cargo_bin_cmd!("chat-llm");
     cmd.env_clear();
-    cmd.arg("test arg");
     cmd.assert()
         .failure()
         .stdout("")
@@ -34,7 +33,6 @@ fn empty_envs() {
     cmd.env("LLM_API_KEY", "");
     cmd.env("LLM_URL", "");
     cmd.env("MODEL_NAME", "");
-    cmd.arg("test arg");
     cmd.assert()
         .failure()
         .stdout("")
@@ -48,26 +46,6 @@ fn no_argument() {
     set_all_envs(&mut cmd);
     cmd.write_stdin("exit\n");
     cmd.assert().success().stdout("> ").stderr("");
-}
-
-#[tokio::test(flavor = "multi_thread")]
-async fn argument_prompt_success() {
-    let mock_server = MockServer::start().await;
-
-    let mock_response = ResponseTemplate::new(200).set_body_raw(SSE_RESPONSE, "text/event-stream");
-
-    Mock::given(method("POST"))
-        .and(path("/"))
-        .respond_with(mock_response)
-        .mount(&mock_server)
-        .await;
-
-    let mut cmd = cargo_bin_cmd!("chat-llm");
-    cmd.env_clear();
-    set_all_envs(&mut cmd);
-    cmd.env("LLM_URL", mock_server.uri());
-    cmd.arg("what is the capital of France in one word?");
-    cmd.assert().success().stdout("Paris\n").stderr("");
 }
 
 #[tokio::test(flavor = "multi_thread")]

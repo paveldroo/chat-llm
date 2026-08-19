@@ -3,5 +3,15 @@ use clap::Parser;
 #[derive(Parser)]
 #[command(version, about)]
 pub struct Cli {
-    pub prompt: Option<String>,
+    #[arg[long]]
+    pub system: Option<String>,
+
+    #[arg[long]]
+    pub model: Option<String>,
+
+    #[arg[long]]
+    pub temperature: Option<String>,
+
+    #[arg[long= "max-tokens"]]
+    pub max_tokens: Option<usize>,
 }
