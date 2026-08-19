@@ -36,11 +36,14 @@ struct ChatTemplateKwargs {
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct ChatRequest {
-    model: String,
+    pub model: String,
     pub messages: Vec<Message>,
     #[serde(skip_serializing_if = "Option::is_none")]
     chat_template_kwargs: Option<ChatTemplateKwargs>,
     stream: bool,
+    pub instructions: Option<String>,
+    pub temperature: Option<f32>,
+    pub max_tokens: Option<usize>,
 }
 
 #[derive(Deserialize, Debug)]
@@ -82,6 +85,9 @@ impl Client {
                 enable_thinking: false,
             }),
             stream: true,
+            instructions: self.cfg.system.clone(),
+            temperature: self.cfg.temperature,
+            max_tokens: self.cfg.max_tokens,
         };
 
         let res = self

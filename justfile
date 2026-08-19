@@ -3,7 +3,7 @@ set dotenv-load := true
 export PROJECT_NAME := "chat-llm"
 
 run:
-    RUST_BACKTRACE=1 cargo run
+    RUST_BACKTRACE=1 cargo run -- --system="speak in French"
 
 lint:
     cargo fmt
