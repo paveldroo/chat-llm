@@ -16,9 +16,12 @@ async fn main() -> ExitCode {
 async fn run() -> Result<(), Error> {
     let cli = cli::Cli::parse();
     let cfg = config::Config::new(cli)?;
-    let llm_client = llm::Client::new(cfg)?;
+    let llm_client = llm::Client::new(cfg.clone())?;
 
     let mut conversation = Conversation::new();
+    if cfg.system.is_some() {
+        conversation.push_system(&cfg.system.unwrap_or_default());
+    }
     loop {
         {
             let mut out = std::io::stdout().lock();

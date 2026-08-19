@@ -21,10 +21,18 @@ impl Message {
     }
 
     #[must_use]
-    pub fn assistant(context: &str) -> Self {
+    pub fn assistant(content: &str) -> Self {
         Self {
             role: "assistant".to_string(),
-            content: context.to_string(),
+            content: content.to_string(),
+        }
+    }
+
+    #[must_use]
+    pub fn system(content: &str) -> Self {
+        Self {
+            role: "system".to_string(),
+            content: content.to_string(),
         }
     }
 }
@@ -41,7 +49,6 @@ pub struct ChatRequest {
     #[serde(skip_serializing_if = "Option::is_none")]
     chat_template_kwargs: Option<ChatTemplateKwargs>,
     stream: bool,
-    pub instructions: Option<String>,
     pub temperature: Option<f32>,
     pub max_tokens: Option<usize>,
 }
@@ -85,7 +92,6 @@ impl Client {
                 enable_thinking: false,
             }),
             stream: true,
-            instructions: self.cfg.system.clone(),
             temperature: self.cfg.temperature,
             max_tokens: self.cfg.max_tokens,
         };

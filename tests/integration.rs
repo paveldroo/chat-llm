@@ -141,13 +141,16 @@ async fn all_params_are_filled() -> Result<(), Box<dyn Error>> {
         .ok_or("no second request was received by mock server")?
         .body_json::<ChatRequest>()?;
 
-    assert_eq!(
-        user_request.instructions.clone().unwrap_or_default(),
-        system
-    );
     assert_eq!(user_request.model, model);
     assert_float_relative_eq!(user_request.temperature.unwrap_or_default(), temperature);
     assert_eq!(user_request.max_tokens.unwrap_or_default(), max_tokens);
+
+    let first_message = user_request
+        .messages
+        .first()
+        .ok_or("no messages in user request")?;
+
+    assert!(predicates::str::contains(system).eval(&first_message.content));
 
     Ok(())
 }

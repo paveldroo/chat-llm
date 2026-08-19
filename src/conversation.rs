@@ -19,6 +19,10 @@ impl Conversation {
         self.messages.push(Message::assistant(content));
     }
 
+    pub fn push_system(&mut self, content: &str) {
+        self.messages.push(Message::user(content));
+    }
+
     #[must_use]
     pub const fn as_slice(&self) -> &[Message] {
         self.messages.as_slice()

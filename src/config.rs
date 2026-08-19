@@ -2,7 +2,7 @@ use serde::Deserialize;
 
 use crate::{cli, error::Error};
 
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize, Debug, Clone)]
 pub struct Config {
     pub llm_api_key: String,
     pub llm_url: String,
