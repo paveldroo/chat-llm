@@ -20,7 +20,7 @@ impl Conversation {
     }
 
     pub fn push_system(&mut self, content: &str) {
-        self.messages.push(Message::user(content));
+        self.messages.push(Message::system(content));
     }
 
     #[must_use]
