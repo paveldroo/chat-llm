@@ -45,7 +45,7 @@ fn no_argument() {
     cmd.env_clear();
     set_all_envs(&mut cmd);
     cmd.write_stdin("exit\n");
-    cmd.assert().success().stdout("> ").stderr("");
+    cmd.assert().success().stdout("\n> ").stderr("");
 }
 
 #[tokio::test(flavor = "multi_thread")]

@@ -26,7 +26,7 @@ async fn run() -> Result<(), Error> {
     loop {
         {
             let mut out = std::io::stdout().lock();
-            write!(out, "> ")?;
+            write!(out, "\n> ")?;
             out.flush()?;
         }
         let mut user_input = String::new();
@@ -42,12 +42,6 @@ async fn run() -> Result<(), Error> {
         let res = llm_client.stream_request(conversation.as_slice()).await;
         match res {
             Ok(response) => {
-                {
-                    let mut out = std::io::stdout().lock();
-                    writeln!(out)?;
-                    out.flush()?;
-                }
-
                 conversation.push_assistant(&response);
             }
             Err(err) => {
