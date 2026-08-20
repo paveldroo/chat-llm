@@ -1,7 +1,6 @@
 use std::error::Error;
 
 use assert_cmd::{Command, cargo::cargo_bin_cmd};
-use assert_float_eq::assert_float_relative_eq;
 use chat_llm::llm::{self, ChatRequest};
 use predicates::prelude::{Predicate, predicate};
 use wiremock::{
@@ -142,7 +141,7 @@ async fn all_params_are_filled() -> Result<(), Box<dyn Error>> {
         .body_json::<ChatRequest>()?;
 
     assert_eq!(user_request.model, model);
-    assert_float_relative_eq!(user_request.temperature.unwrap_or_default(), temperature);
+    assert_eq!(user_request.temperature, Some(temperature));
     assert_eq!(user_request.max_tokens.unwrap_or_default(), max_tokens);
 
     let first_message = user_request

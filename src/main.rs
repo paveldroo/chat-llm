@@ -39,14 +39,22 @@ async fn run() -> Result<(), Error> {
             continue;
         }
         conversation.push_user(trimmed_input);
-        let res = llm_client.stream_request(conversation.as_slice()).await?;
-        {
-            let mut out = std::io::stdout().lock();
-            writeln!(out)?;
-            out.flush()?;
+        let res = llm_client.stream_request(conversation.as_slice()).await;
+        match res {
+            Ok(response) => {
+                {
+                    let mut out = std::io::stdout().lock();
+                    writeln!(out)?;
+                    out.flush()?;
+                }
+
+                conversation.push_assistant(&response);
+            },
+            Err(err) => {
+                eprintln!("error occurred while making request to llm: {err}")
+            }
         }
 
-        conversation.push_assistant(&res);
     }
 
     Ok(())
