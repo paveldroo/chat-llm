@@ -1,4 +1,4 @@
-use crate::llm::Message;
+use crate::{error::Error, llm::Message};
 
 #[derive(Default)]
 pub struct Conversation {
@@ -11,16 +11,20 @@ impl Conversation {
         Self::default()
     }
 
+    pub fn with_system(&mut self, content: &str) -> Result<(), Error> {
+        if !self.messages.is_empty() {
+            return Err(Error::SystemMessage);
+        }
+        self.messages.push(Message::system(content));
+        Ok(())
+    }
+
     pub fn push_user(&mut self, content: &str) {
         self.messages.push(Message::user(content));
     }
 
     pub fn push_assistant(&mut self, content: &str) {
         self.messages.push(Message::assistant(content));
-    }
-
-    pub fn push_system(&mut self, content: &str) {
-        self.messages.push(Message::system(content));
     }
 
     #[must_use]

@@ -22,4 +22,7 @@ pub enum Error {
 
     #[error(transparent)]
     Io(#[from] std::io::Error),
+
+    #[error("push system message in existing conversation is not possible")]
+    SystemMessage,
 }

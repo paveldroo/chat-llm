@@ -18,7 +18,7 @@ async fn run() -> Result<(), Error> {
 
     let mut conversation = Conversation::new();
     if let Some(system) = &cfg.system {
-        conversation.push_system(system);
+        conversation.with_system(system)?;
     }
 
     let llm_client = llm::Client::new(cfg)?;
@@ -49,12 +49,11 @@ async fn run() -> Result<(), Error> {
                 }
 
                 conversation.push_assistant(&response);
-            },
+            }
             Err(err) => {
-                eprintln!("error occurred while making request to llm: {err}")
+                eprintln!("error occurred while making request to llm: {err}");
             }
         }
-
     }
 
     Ok(())

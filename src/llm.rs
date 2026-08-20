@@ -6,8 +6,16 @@ use serde::{Deserialize, Serialize};
 use crate::{config, error::Error};
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
+#[serde(rename_all = "lowercase")]
+enum Role {
+    System,
+    User,
+    Assistant,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Message {
-    pub role: String,
+    role: Role,
     pub content: String,
 }
 
@@ -15,7 +23,7 @@ impl Message {
     #[must_use]
     pub fn user(content: &str) -> Self {
         Self {
-            role: "user".to_string(),
+            role: Role::User,
             content: content.to_string(),
         }
     }
@@ -23,7 +31,7 @@ impl Message {
     #[must_use]
     pub fn assistant(content: &str) -> Self {
         Self {
-            role: "assistant".to_string(),
+            role: Role::Assistant,
             content: content.to_string(),
         }
     }
@@ -31,7 +39,7 @@ impl Message {
     #[must_use]
     pub fn system(content: &str) -> Self {
         Self {
-            role: "system".to_string(),
+            role: Role::System,
             content: content.to_string(),
         }
     }
