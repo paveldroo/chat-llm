@@ -14,14 +14,15 @@ async fn main() -> ExitCode {
 }
 
 async fn run() -> Result<(), Error> {
-    let cli = cli::Cli::parse();
-    let cfg = config::Config::new(cli)?;
-    let llm_client = llm::Client::new(cfg.clone())?;
+    let cfg = config::Config::new(cli::Cli::parse())?;
 
     let mut conversation = Conversation::new();
-    if cfg.system.is_some() {
-        conversation.push_system(&cfg.system.unwrap_or_default());
+    if let Some(system) = &cfg.system {
+        conversation.push_system(system);
     }
+
+    let llm_client = llm::Client::new(cfg)?;
+
     loop {
         {
             let mut out = std::io::stdout().lock();

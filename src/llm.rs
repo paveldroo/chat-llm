@@ -46,10 +46,15 @@ struct ChatTemplateKwargs {
 pub struct ChatRequest {
     pub model: String,
     pub messages: Vec<Message>,
+    stream: bool,
+
     #[serde(skip_serializing_if = "Option::is_none")]
     chat_template_kwargs: Option<ChatTemplateKwargs>,
-    stream: bool,
+
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub temperature: Option<f32>,
+
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub max_tokens: Option<usize>,
 }
 
@@ -88,10 +93,10 @@ impl Client {
         let req = ChatRequest {
             model: self.cfg.model_name.clone(),
             messages: messages.to_vec(),
+            stream: true,
             chat_template_kwargs: Some(ChatTemplateKwargs {
                 enable_thinking: false,
             }),
-            stream: true,
             temperature: self.cfg.temperature,
             max_tokens: self.cfg.max_tokens,
         };
