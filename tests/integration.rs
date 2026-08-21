@@ -140,7 +140,7 @@ async fn all_params_are_filled() -> Result<(), Box<dyn Error>> {
 
     let user_request = requests
         .first()
-        .ok_or("no second request was received by mock server")?
+        .ok_or("no request was received by mock server")?
         .body_json::<ChatRequest>()?;
 
     assert_eq!(user_request.model, model);
@@ -153,6 +153,52 @@ async fn all_params_are_filled() -> Result<(), Box<dyn Error>> {
         .ok_or("no messages in user request")?;
 
     assert!(predicates::str::contains(system).eval(&first_message.content));
+
+    Ok(())
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn linux_pipe() -> Result<(), Box<dyn Error>> {
+    let mock_server = MockServer::start().await;
+
+    let response_data = std::fs::read("tests/fixtures/paris.sse")?;
+    let mock_response = ResponseTemplate::new(200)
+        .set_body_raw(String::from_utf8(response_data)?, "text/event-stream");
+
+    Mock::given(method("POST"))
+        .and(path("/"))
+        .respond_with(mock_response)
+        .mount(&mock_server)
+        .await;
+
+    let mut cmd = cargo_bin_cmd!("chat-llm");
+    cmd.env_clear();
+    set_all_envs(&mut cmd);
+    cmd.env("LLM_URL", mock_server.uri());
+
+    let pipeout_content = std::fs::read("tests/fixtures/prompt.txt")?;
+    cmd.write_stdin(pipeout_content.clone()).unwrap();
+
+    let requests = mock_server
+        .received_requests()
+        .await
+        .ok_or("mock server received no requests")?;
+
+    assert!(!requests.is_empty());
+
+    let user_request = requests
+        .first()
+        .ok_or("no request was received by mock server")?
+        .body_json::<ChatRequest>()?;
+
+    let first_message = user_request
+        .messages
+        .first()
+        .ok_or("no messages in user request")?;
+
+    assert!(
+        predicates::str::contains(String::from_utf8(pipeout_content)?).eval(&first_message.content)
+    );
 
     Ok(())
 }
