@@ -1,6 +1,11 @@
-use chat_llm::{cli, config, conversation::Conversation, error::Error, llm};
+use chat_llm::{
+    cli, config, conversation::Conversation, error::Error, llm, render::stream_stdout_text,
+};
 use clap::Parser;
-use std::{io, io::Write, process::ExitCode};
+use std::{
+    io::{self, IsTerminal, Read, Write},
+    process::ExitCode,
+};
 
 #[tokio::main(flavor = "multi_thread")]
 async fn main() -> ExitCode {
@@ -22,6 +27,10 @@ async fn run() -> Result<(), Error> {
     }
 
     let llm_client = llm::Client::new(cfg)?;
+
+    if !io::stdin().is_terminal() {
+        return stdin_pipe_handler(llm_client, &mut conversation).await;
+    }
 
     loop {
         {
@@ -50,5 +59,27 @@ async fn run() -> Result<(), Error> {
         }
     }
 
+    Ok(())
+}
+
+async fn stdin_pipe_handler(
+    llm_client: llm::Client,
+    conversation: &mut Conversation,
+) -> Result<(), Error> {
+    let mut stdin_input = String::new();
+    io::stdin().lock().read_to_string(&mut stdin_input)?;
+    if !stdin_input.trim().is_empty() {
+        conversation.push_user(&stdin_input);
+        let res = llm_client.stream_request(conversation.as_slice()).await;
+        match res {
+            Ok(response) => {
+                stream_stdout_text(&mut response.into_bytes(), true)?;
+            }
+            Err(err) => {
+                eprintln!("error occurred while making request to llm: {err}");
+                return Err(err);
+            }
+        }
+    }
     Ok(())
 }

@@ -1,0 +1,12 @@
+You are a technical evaluator. Please process the following multi-part request carefully and adhere strictly to all instructions.
+
+1. LOGIC & REASONING:
+A farmer has a wolf, a goat, and a cabbage. He needs to cross a river with a boat that can only hold himself and one item at a time. Explain in two sentences how he prevents the wolf from eating the goat and the goat from eating the cabbage.
+
+2. CODING & SYNTAX:
+Write a short Python function named `is_palindrome` that checks if a given string is a palindrome, ignoring spaces and capitalization. Include one example usage.
+
+3. CONSTRAINT CHECK:
+List three primary colors, but output them in reverse alphabetical order as a comma-separated list. Do not include any introductory or concluding text for this specific section.
+
+Format your entire output with clear Markdown headers corresponding to each section (1, 2, and 3).
