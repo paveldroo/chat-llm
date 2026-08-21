@@ -218,8 +218,10 @@ async fn stream_request_with_retry() -> Result<(), Box<dyn Error>> {
     set_all_envs(&mut cmd);
     cmd.env("LLM_URL", mock_server.uri());
 
-    cmd.write_stdin("some_input\n").assert().failure();
-    // .stderr(predicates::str::contains("429"));
+    cmd.write_stdin("some_input\n")
+        .assert()
+        .failure()
+        .stderr(predicates::str::contains("429"));
 
     let requests = mock_server
         .received_requests()
