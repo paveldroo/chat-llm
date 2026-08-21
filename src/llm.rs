@@ -1,4 +1,5 @@
 use futures_util::StreamExt;
+use reqwest::StatusCode;
 use std::time::Duration;
 
 use serde::{Deserialize, Serialize};
@@ -66,6 +67,8 @@ pub struct ChatRequest {
     pub max_tokens: Option<usize>,
 }
 
+const MAX_RETRIES: u64 = 3;
+
 pub struct Client {
     http: reqwest::Client,
     cfg: config::Config,
@@ -80,6 +83,26 @@ impl Client {
 
         let client = Self { http: client, cfg };
         Ok(client)
+    }
+
+    pub async fn stream_request_with_retry(&self, messages: &[Message]) -> Result<String, Error> {
+        let mut retries = 0;
+        loop {
+            retries += 1;
+            let res = self.stream_request(messages).await;
+            match res {
+                Ok(response) => return Ok(response),
+                Err(Error::Api { status, .. })
+                    if retries < MAX_RETRIES
+                        && (status == StatusCode::TOO_MANY_REQUESTS
+                            || status.is_server_error()) =>
+                {
+                    let backoff = Duration::from_secs(retries * 2);
+                    tokio::time::sleep(backoff).await;
+                }
+                Err(err) => return Err(err),
+            }
+        }
     }
 
     pub async fn stream_request(&self, messages: &[Message]) -> Result<String, Error> {

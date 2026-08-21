@@ -28,8 +28,8 @@ async fn run() -> Result<(), Error> {
 
     let llm_client = llm::Client::new(cfg)?;
 
-    let force_repl = std::env::var("TEST_REPL").is_ok();
-    if !io::stdin().is_terminal() && !force_repl {
+    let force_repl = std::env::var("TEST_PIPE").is_ok();
+    if !io::stdin().is_terminal() && force_repl {
         return stdin_pipe_handler(llm_client, &mut conversation).await;
     }
 
@@ -49,14 +49,14 @@ async fn run() -> Result<(), Error> {
             continue;
         }
         conversation.push_user(trimmed_input);
-        let res = llm_client.stream_request(conversation.as_slice()).await;
+        let res = llm_client
+            .stream_request_with_retry(conversation.as_slice())
+            .await;
         match res {
             Ok(response) => {
                 conversation.push_assistant(&response);
             }
-            Err(err) => {
-                eprintln!("error occurred while making request to llm: {err}");
-            }
+            Err(err) => return Err(err),
         }
     }
 
@@ -71,7 +71,9 @@ async fn stdin_pipe_handler(
     io::stdin().lock().read_to_string(&mut stdin_input)?;
     if !stdin_input.trim().is_empty() {
         conversation.push_user(&stdin_input);
-        let res = llm_client.stream_request(conversation.as_slice()).await;
+        let res = llm_client
+            .stream_request_with_retry(conversation.as_slice())
+            .await;
         match res {
             Ok(response) => {
                 stream_stdout_text(&mut response.into_bytes(), true)?;

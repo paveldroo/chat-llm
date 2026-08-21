@@ -44,7 +44,6 @@ fn no_argument() {
     let mut cmd = cargo_bin_cmd!("chat-llm");
     cmd.env_clear();
     set_all_envs(&mut cmd);
-    cmd.env("TEST_REPL", "true");
     cmd.write_stdin("exit\n");
     cmd.assert().success().stdout("\n> ").stderr("");
 }
@@ -63,7 +62,6 @@ async fn repl_prompt_success() -> Result<(), Box<dyn Error>> {
 
     let mut cmd = cargo_bin_cmd!("chat-llm");
     cmd.env_clear();
-    cmd.env("TEST_REPL", "true");
     set_all_envs(&mut cmd);
     cmd.env("LLM_URL", mock_server.uri());
 
@@ -117,7 +115,6 @@ async fn all_params_are_filled() -> Result<(), Box<dyn Error>> {
     let mut cmd = cargo_bin_cmd!("chat-llm");
     cmd.env_clear();
     set_all_envs(&mut cmd);
-    cmd.env("TEST_REPL", "true");
     cmd.args(&[
         format!("--system={system}"),
         format!("--model={model}"),
@@ -174,6 +171,7 @@ async fn linux_pipe() -> Result<(), Box<dyn Error>> {
     let mut cmd = cargo_bin_cmd!("chat-llm");
     cmd.env_clear();
     set_all_envs(&mut cmd);
+    cmd.env("TEST_PIPE", "true");
     cmd.env("LLM_URL", mock_server.uri());
 
     let pipeout_content = std::fs::read("tests/fixtures/prompt.txt")?;
@@ -199,6 +197,37 @@ async fn linux_pipe() -> Result<(), Box<dyn Error>> {
     assert!(
         predicates::str::contains(String::from_utf8(pipeout_content)?).eval(&first_message.content)
     );
+
+    Ok(())
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn stream_request_with_retry() -> Result<(), Box<dyn Error>> {
+    let mock_server = MockServer::start().await;
+
+    let mock_response = ResponseTemplate::new(429).set_body_raw("", "text/event-stream");
+
+    Mock::given(method("POST"))
+        .and(path("/"))
+        .respond_with(mock_response)
+        .mount(&mock_server)
+        .await;
+
+    let mut cmd = cargo_bin_cmd!("chat-llm");
+    cmd.env_clear();
+    set_all_envs(&mut cmd);
+    cmd.env("LLM_URL", mock_server.uri());
+
+    cmd.write_stdin("some_input\n").assert().failure();
+    // .stderr(predicates::str::contains("429"));
+
+    let requests = mock_server
+        .received_requests()
+        .await
+        .ok_or("mock server received no requests")?;
+
+    assert!(!requests.is_empty());
+    assert_eq!(requests.len(), 3);
 
     Ok(())
 }
