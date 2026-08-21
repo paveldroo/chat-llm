@@ -44,6 +44,7 @@ fn no_argument() {
     let mut cmd = cargo_bin_cmd!("chat-llm");
     cmd.env_clear();
     set_all_envs(&mut cmd);
+    cmd.env("TEST_REPL", "true");
     cmd.write_stdin("exit\n");
     cmd.assert().success().stdout("\n> ").stderr("");
 }
@@ -62,6 +63,7 @@ async fn repl_prompt_success() -> Result<(), Box<dyn Error>> {
 
     let mut cmd = cargo_bin_cmd!("chat-llm");
     cmd.env_clear();
+    cmd.env("TEST_REPL", "true");
     set_all_envs(&mut cmd);
     cmd.env("LLM_URL", mock_server.uri());
 
@@ -115,6 +117,7 @@ async fn all_params_are_filled() -> Result<(), Box<dyn Error>> {
     let mut cmd = cargo_bin_cmd!("chat-llm");
     cmd.env_clear();
     set_all_envs(&mut cmd);
+    cmd.env("TEST_REPL", "true");
     cmd.args(&[
         format!("--system={system}"),
         format!("--model={model}"),

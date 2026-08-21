@@ -28,7 +28,8 @@ async fn run() -> Result<(), Error> {
 
     let llm_client = llm::Client::new(cfg)?;
 
-    if !io::stdin().is_terminal() {
+    let force_repl = std::env::var("TEST_REPL").is_ok();
+    if !io::stdin().is_terminal() && !force_repl {
         return stdin_pipe_handler(llm_client, &mut conversation).await;
     }
 
