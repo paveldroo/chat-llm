@@ -85,11 +85,15 @@ impl Client {
         Ok(client)
     }
 
-    pub async fn stream_request_with_retry(&self, messages: &[Message]) -> Result<String, Error> {
+    pub async fn stream_request_with_retry(
+        &self,
+        messages: &[Message],
+        budget: Option<i32>,
+    ) -> Result<String, Error> {
         let mut retries = 0;
         loop {
             retries += 1;
-            let res = self.stream_request(messages).await;
+            let res = self.stream_request(messages, budget).await;
             match res {
                 Ok(response) => return Ok(response),
                 Err(Error::Api { status, .. })
@@ -105,7 +109,11 @@ impl Client {
         }
     }
 
-    pub async fn stream_request(&self, messages: &[Message]) -> Result<String, Error> {
+    pub async fn stream_request(
+        &self,
+        messages: &[Message],
+        budget: Option<i32>,
+    ) -> Result<String, Error> {
         let req = ChatRequest {
             model: self.cfg.model_name.clone(),
             messages: messages.to_vec(),
@@ -140,11 +148,16 @@ impl Client {
         while let Some(chunk_result) = stream.next().await {
             let chunk = chunk_result?;
             buffer.extend(chunk.as_ref());
-            let text = render::stream_stdout_text(&mut buffer, false)?;
+            let (text, token_budget) = render::stream_stdout_text(&mut buffer, false)?;
             answer.push_str(&text);
+            if let Some(b) = budget
+                && token_budget > b
+            {
+                break;
+            }
         }
 
-        let tail = render::stream_stdout_text(&mut buffer, true)?;
+        let (tail, _) = render::stream_stdout_text(&mut buffer, true)?;
         answer.push_str(&tail);
 
         Ok(answer)

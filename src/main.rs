@@ -26,11 +26,11 @@ async fn run() -> Result<(), Error> {
         conversation.with_system(system)?;
     }
 
-    let llm_client = llm::Client::new(cfg)?;
+    let llm_client = llm::Client::new(cfg.clone())?;
 
     let force_repl = std::env::var("TEST_PIPE").is_ok();
     if !io::stdin().is_terminal() && force_repl {
-        return stdin_pipe_handler(llm_client, &mut conversation).await;
+        return stdin_pipe_handler(llm_client, &mut conversation, cfg.budget).await;
     }
 
     loop {
@@ -50,7 +50,7 @@ async fn run() -> Result<(), Error> {
         }
         conversation.push_user(trimmed_input);
         let res = llm_client
-            .stream_request_with_retry(conversation.as_slice())
+            .stream_request_with_retry(conversation.as_slice(), cfg.budget)
             .await;
         match res {
             Ok(response) => {
@@ -66,13 +66,14 @@ async fn run() -> Result<(), Error> {
 async fn stdin_pipe_handler(
     llm_client: llm::Client,
     conversation: &mut Conversation,
+    budget: Option<i32>,
 ) -> Result<(), Error> {
     let mut stdin_input = String::new();
     io::stdin().lock().read_to_string(&mut stdin_input)?;
     if !stdin_input.trim().is_empty() {
         conversation.push_user(&stdin_input);
         let res = llm_client
-            .stream_request_with_retry(conversation.as_slice())
+            .stream_request_with_retry(conversation.as_slice(), budget)
             .await;
         match res {
             Ok(response) => {

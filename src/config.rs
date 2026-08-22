@@ -10,6 +10,7 @@ pub struct Config {
     pub system: Option<String>,
     pub temperature: Option<f32>,
     pub max_tokens: Option<usize>,
+    pub budget: Option<i32>,
 }
 
 impl Config {
@@ -26,6 +27,7 @@ impl Config {
         c.system = cli.system;
         c.temperature = cli.temperature;
         c.max_tokens = cli.max_tokens;
+        c.budget = cli.budget;
 
         for (env, val) in [("LLM_API_KEY", &c.llm_api_key), ("LLM_URL", &c.llm_url)] {
             if val.is_empty() {

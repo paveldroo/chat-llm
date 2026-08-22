@@ -14,12 +14,18 @@ struct StreamChoice {
 }
 
 #[derive(Deserialize, Debug)]
-struct ChatStreamChunk {
-    choices: Vec<StreamChoice>,
+struct Usage {
+    total_tokens: i32,
 }
 
-pub fn stream_stdout_text(buffer: &mut Vec<u8>, eof: bool) -> Result<String, Error> {
-    let text = if eof {
+#[derive(Deserialize, Debug)]
+struct ChatStreamChunk {
+    choices: Vec<StreamChoice>,
+    usage: Usage,
+}
+
+pub fn stream_stdout_text(buffer: &mut Vec<u8>, eof: bool) -> Result<(String, i32), Error> {
+    let (text, token_budget) = if eof {
         render(lines_at_eof(buffer))?
     } else {
         render(lines_from_chunk(buffer))?
@@ -30,31 +36,38 @@ pub fn stream_stdout_text(buffer: &mut Vec<u8>, eof: bool) -> Result<String, Err
         write!(out, "{text}")?;
         out.flush()?;
     }
-    Ok(text)
+    Ok((text, token_budget))
 }
 
-fn render(lines: Vec<String>) -> Result<String, Error> {
+fn render(lines: Vec<String>) -> Result<(String, i32), Error> {
+    let mut current_token_budget = 0;
     let mut text = String::new();
     for line in lines {
         let Some(json_part) = line.as_str().strip_prefix("data:") else {
             continue;
         };
-        text.push_str(&parse_stream_response(json_part.trim())?);
+        let (content, token_budget) = parse_stream_response(json_part.trim())?;
+        current_token_budget += token_budget;
+        text.push_str(&content);
     }
-    Ok(text)
+    Ok((text, current_token_budget))
 }
 
-fn parse_stream_response(body: &str) -> Result<String, Error> {
+fn parse_stream_response(body: &str) -> Result<(String, i32), Error> {
     if body == "[DONE]" || body.is_empty() {
-        return Ok(String::new());
+        return Ok((String::new(), 0));
     }
     let chunk: ChatStreamChunk = serde_json::from_str(body)?;
-    Ok(chunk
-        .choices
-        .into_iter()
-        .next()
-        .and_then(|choice| choice.delta.content)
-        .unwrap_or_default())
+
+    Ok((
+        chunk
+            .choices
+            .into_iter()
+            .next()
+            .and_then(|choice| choice.delta.content)
+            .unwrap_or_default(),
+        chunk.usage.total_tokens,
+    ))
 }
 
 fn lines_from_chunk(buffer: &mut Vec<u8>) -> Vec<String> {
@@ -83,21 +96,20 @@ fn take_lines(buffer: &mut Vec<u8>, end: usize) -> Vec<String> {
 mod tests {
     use super::*;
 
-    const DELTA_CHUNK: &str = r#"{"id":"c0","object":"chat.completion.chunk","choices":[{"index":0,"delta":{"content":"Paris"},"finish_reason":null}]}"#;
+    const DELTA_CHUNK: &str = r#"{"id":"c0","object":"chat.completion.chunk","choices":[{"index":0,"delta":{"content":"Paris"},"finish_reason":null}], "usage":{"total_tokens":0}}"#;
 
     #[test]
     fn extract_delta_content() {
-        assert!(matches!(
-            parse_stream_response(DELTA_CHUNK).as_deref(),
-            Ok("Paris")
-        ));
+        let _want = (String::from("Paris"), 0);
+        assert!(matches!(parse_stream_response(DELTA_CHUNK), Ok(_want)));
     }
 
     #[test]
     fn comment_lines_are_skipped() {
+        let _want = (String::new(), 0);
         assert!(matches!(
-            render(vec![":".to_string(), ": ping".to_string()]).as_deref(),
-            Ok("")
+            render(vec![":".to_string(), ": ping".to_string()]),
+            Ok(_want)
         ));
     }
 

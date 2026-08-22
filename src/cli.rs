@@ -14,4 +14,7 @@ pub struct Cli {
 
     #[arg(long = "max-tokens")]
     pub max_tokens: Option<usize>,
+
+    #[arg(long)]
+    pub budget: Option<i32>,
 }
