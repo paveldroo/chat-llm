@@ -25,4 +25,7 @@ pub enum Error {
 
     #[error("push system message in existing conversation is not possible")]
     SystemMessage,
+
+    #[error("budget exceeded with {0} tokens")]
+    BudgetExceeded(i32),
 }

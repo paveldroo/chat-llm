@@ -158,7 +158,7 @@ async fn all_params_are_filled() -> Result<(), Box<dyn Error>> {
 async fn linux_pipe() -> Result<(), Box<dyn Error>> {
     let mock_server = MockServer::start().await;
 
-    let response_data = std::fs::read("tests/fixtures/paris.sse")?;
+    let response_data = std::fs::read("tests/fixtures/paris_without_budget.sse")?;
     let mock_response = ResponseTemplate::new(200)
         .set_body_raw(String::from_utf8(response_data)?, "text/event-stream");
 
@@ -230,6 +230,34 @@ async fn stream_request_with_retry() -> Result<(), Box<dyn Error>> {
 
     assert!(!requests.is_empty());
     assert_eq!(requests.len(), 3);
+
+    Ok(())
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn cfg_with_budget() -> Result<(), Box<dyn Error>> {
+    let mock_server = MockServer::start().await;
+
+    let response_data = std::fs::read("tests/fixtures/paris_with_budget.sse")?;
+    let mock_response = ResponseTemplate::new(200)
+        .set_body_raw(String::from_utf8(response_data)?, "text/event-stream");
+
+    Mock::given(method("POST"))
+        .and(path("/"))
+        .respond_with(mock_response)
+        .mount(&mock_server)
+        .await;
+
+    let mut cmd = cargo_bin_cmd!("chat-llm");
+    cmd.env_clear();
+    set_all_envs(&mut cmd);
+    cmd.env("LLM_URL", mock_server.uri());
+    cmd.arg("--budget=20");
+    cmd.write_stdin("hello\n");
+    cmd.assert()
+        .failure()
+        .stdout(predicates::str::contains("Paris"))
+        .stderr(predicates::str::contains("budget exceeded"));
 
     Ok(())
 }

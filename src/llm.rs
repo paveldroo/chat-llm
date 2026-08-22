@@ -153,7 +153,7 @@ impl Client {
             if let Some(b) = budget
                 && token_budget > b
             {
-                break;
+                return Err(Error::BudgetExceeded(b));
             }
         }
 
